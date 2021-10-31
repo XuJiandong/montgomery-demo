@@ -56,7 +56,12 @@ impl Mont {
     }
     pub fn multi(&self, x: u32, y: u32) -> u32 {
         let xy = x as u64 * y as u64;
-        self.reduce(xy)
+        let res = self.reduce(xy);
+        if res > self.n {
+            res - self.n
+        } else {
+            res
+        }
     }
 }
 
