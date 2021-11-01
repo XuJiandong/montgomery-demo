@@ -38,8 +38,13 @@ impl Mont {
         let n = self.n as i64;
         let (gcd, np, rp) = egcd(n, r);
         assert_eq!(gcd, 1);
-        self.rp1 = if rp < 0 { -rp as u32 } else { rp as u32 };
-        self.np1 = if np < 0 { -np as u32 } else { np as u32 };
+
+        let rp1 = rp + self.n as i64;
+        assert!(rp1 >= 0);
+        self.rp1 = rp1 as u32;
+        let np1 = self.r as i64 - np;
+        assert!(np1 >= 0);
+        self.np1 = np1 as u32;
     }
     // m = T*Np1 mod R
     // U = (T + m * N) / R
@@ -47,7 +52,11 @@ impl Mont {
     pub fn reduce(&self, t: u64) -> u32 {
         let m = (t * (self.np1 as u64)) as u32;
         let u = (t + (m as u64) * (self.n as u64)) >> self.bits;
-        u as u32
+        if u >= self.n as u64 {
+            (u - self.n as u64) as u32
+        } else {
+            u as u32
+        }
     }
     pub fn to_mont(&self, x: u32) -> u32 {
         // divide n, need a lot of cycles
@@ -56,18 +65,13 @@ impl Mont {
     }
     pub fn multi(&self, x: u32, y: u32) -> u32 {
         let xy = x as u64 * y as u64;
-        let res = self.reduce(xy);
-        if res > self.n {
-            res - self.n
-        } else {
-            res
-        }
+        self.reduce(xy)
     }
 }
 
 #[test]
 pub fn test() {
-    let mut mont = Mont::new(17);
+    let mut mont = Mont::new(10001);
     mont.precompute();
 
     let x: u32 = 10;
@@ -75,8 +79,8 @@ pub fn test() {
     let x3 = mont.reduce(x2 as u64);
     assert_eq!(x, x3);
 
-    let x: u32 = 100;
-    let y: u32 = 200;
+    let x: u32 = 10;
+    let y: u32 = 20;
     // into montgomery form
     let x2 = mont.to_mont(x);
     let y2 = mont.to_mont(y);
