@@ -50,9 +50,9 @@ impl Mont {
     // U = (T + m * N) / R
     // The overall process delivers T · R−1 mod N without an expensive division operation!
     pub fn reduce(&self, t: u64) -> u32 {
-        let t0 = t as u32 as u64; // low part of `t`
-        let m = (t0 * (self.np1 as u64)) as u32; // same as `mod self.r`
-        let u = (t + (m as u64) * (self.n as u64)) >> self.bits; // same as `/self.r`
+        let t0 = t as u32 as u64; // low part of `t`, same as `mode self.r`, avoid overflow
+        let m = (t0 * self.np1 as u64) as u32 as u64; // `mod self.r`
+        let u = (t + m * (self.n as u64)) >> self.bits; // `/self.r`
         if u >= self.n as u64 {
             (u - self.n as u64) as u32
         } else {
