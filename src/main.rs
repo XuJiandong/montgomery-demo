@@ -50,8 +50,9 @@ impl Mont {
     // U = (T + m * N) / R
     // The overall process delivers T · R−1 mod N without an expensive division operation!
     pub fn reduce(&self, t: u64) -> u32 {
-        let m = (t * (self.np1 as u64)) as u32;
-        let u = (t + (m as u64) * (self.n as u64)) >> self.bits;
+        let t0 = t as u32 as u64; // low part of `t`
+        let m = (t0 * (self.np1 as u64)) as u32; // same as `mod self.r`
+        let u = (t + (m as u64) * (self.n as u64)) >> self.bits; // same as `/self.r`
         if u >= self.n as u64 {
             (u - self.n as u64) as u32
         } else {
@@ -69,9 +70,8 @@ impl Mont {
     }
 }
 
-#[test]
-pub fn test() {
-    let mut mont = Mont::new(10001);
+fn test_n(n: u32) {
+    let mut mont = Mont::new(n);
     mont.precompute();
 
     let x: u32 = 10;
@@ -90,6 +90,37 @@ pub fn test() {
     let xy = mont.reduce(xy2 as u64);
     // the result should be same
     assert_eq!(xy, (x * y) % mont.n);
+}
+
+fn test_xy(x: u32, y: u32) {
+    let mut mont = Mont::new(1000001);
+    mont.precompute();
+
+    // into montgomery form
+    let x2 = mont.to_mont(x);
+    let y2 = mont.to_mont(y);
+    // do multiplication operation
+    let xy2 = mont.multi(x2, y2);
+    // into normal form
+    let xy = mont.reduce(xy2 as u64);
+    // the result should be same
+    assert_eq!(xy, (x * y) % mont.n);
+}
+
+#[test]
+pub fn test_n_loops() {
+    for n in 19..10001 {
+        if n % 2 == 1 {
+            test_n(n);
+        }
+    }
+}
+
+#[test]
+pub fn test_xy_loops() {
+    for x in 10000..20000 {
+        test_xy(x, x + 20);
+    }
 }
 
 pub fn main() {}
