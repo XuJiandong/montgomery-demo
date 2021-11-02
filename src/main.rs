@@ -1,3 +1,5 @@
+mod uint_version;
+
 // based on https://research.nccgroup.com/2021/06/09/optimizing-pairing-based-cryptography-montgomery-arithmetic-in-rust/
 
 // Extended Euclidean algorithm
@@ -13,7 +15,6 @@ pub fn egcd(a: i64, b: i64) -> (i64, i64, i64) {
 }
 
 struct Mont {
-    pub rp1: u32,
     pub np1: u32,
     pub r: u64,
     pub n: u32,
@@ -28,7 +29,6 @@ impl Mont {
         Mont {
             r,
             n,
-            rp1: 0,
             np1: 0,
             bits,
             init: false,
@@ -43,10 +43,14 @@ impl Mont {
 
         let rp1 = rp + self.n as i64;
         assert!(rp1 >= 0);
-        self.rp1 = rp1 as u32;
+
         let np1 = self.r as i64 - np;
         assert!(np1 >= 0);
-        self.np1 = np1 as u32;
+        self.np1 = np1 as u32; // can be truncated
+
+        let r = self.r * rp1 as u64;
+        let n = self.n as u64 * np1 as u64;
+        assert_eq!(n + 1, r);
 
         self.init = true;
     }
