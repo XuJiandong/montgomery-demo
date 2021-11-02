@@ -18,6 +18,7 @@ struct Mont {
     pub r: u64,
     pub n: u32,
     pub bits: usize,
+    pub init: bool,
 }
 
 impl Mont {
@@ -30,6 +31,7 @@ impl Mont {
             rp1: 0,
             np1: 0,
             bits,
+            init: false,
         }
     }
 
@@ -45,11 +47,14 @@ impl Mont {
         let np1 = self.r as i64 - np;
         assert!(np1 >= 0);
         self.np1 = np1 as u32;
+
+        self.init = true;
     }
     // m = T*Np1 mod R
     // U = (T + m * N) / R
     // The overall process delivers T · R−1 mod N without an expensive division operation!
     pub fn reduce(&self, t: u64) -> u32 {
+        assert!(self.init);
         let t0 = t as u32 as u64; // low part of `t`, same as `mode self.r`, avoid overflow
         let m = (t0 * self.np1 as u64) as u32 as u64; // `mod self.r`
         let u = (t + m * (self.n as u64)) >> self.bits; // `/self.r`
@@ -60,6 +65,7 @@ impl Mont {
         }
     }
     pub fn to_mont(&self, x: u32) -> u32 {
+        assert!(self.init);
         // divide n, need a lot of cycles
         let res = ((x as u64) * self.r) % (self.n as u64);
         res as u32
@@ -67,6 +73,18 @@ impl Mont {
     pub fn multi(&self, x: u32, y: u32) -> u32 {
         let xy = x as u64 * y as u64;
         self.reduce(xy)
+    }
+    pub fn pow(&self, x: u32, y: u32) -> u32 {
+        let mut base = x;
+        let mut res: u32 = 1;
+        for index in 0..31 {
+            // at most 32 multiplications
+            if ((y >> index) & 1) == 1 {
+                res = self.multi(res, base);
+            }
+            base = self.multi(base, base); // at most 32 multiplications
+        }
+        res
     }
 }
 
@@ -120,6 +138,41 @@ pub fn test_n_loops() {
 pub fn test_xy_loops() {
     for x in 10000..20000 {
         test_xy(x, x + 20);
+    }
+}
+
+#[test]
+pub fn test_multiple() {
+    let mut mont = Mont::new(17);
+    mont.precompute();
+
+    let x = 1;
+    let y = 2;
+    let z = 3;
+    let x2 = mont.to_mont(x);
+    let y2 = mont.to_mont(y);
+    let z2 = mont.to_mont(z);
+
+    let res = mont.multi(mont.multi(x2, y2), z2);
+
+    let res2 = mont.reduce(res as u64);
+    assert_eq!(x * y * z % mont.n, res2);
+}
+
+#[test]
+pub fn test_pow() {
+    let mut mont = Mont::new(17);
+    mont.precompute();
+    for base in 2..5 {
+        for n in 5..10 {
+            let x = mont.to_mont(base);
+
+            let v = mont.pow(x, n);
+            let v = mont.reduce(v as u64);
+
+            let expected = base.pow(n) % mont.n;
+            assert_eq!(expected, v);
+        }
     }
 }
 
