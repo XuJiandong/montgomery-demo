@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 mod rsa;
+mod signed_integer;
 mod uint_version;
 
 // based on https://research.nccgroup.com/2021/06/09/optimizing-pairing-based-cryptography-montgomery-arithmetic-in-rust/
@@ -86,8 +87,8 @@ impl Mont {
         let mut res: u32 = 0;
         let mut first_time: bool = true;
 
-        for index in 0..31 {
-            // at most 32 multiplications
+        for index in 0..self.bits {
+            // at most self.bits (32 here) multiplications
             if ((y >> index) & 1) == 1 {
                 if first_time {
                     // note:
@@ -99,7 +100,7 @@ impl Mont {
                     res = self.multi(res, base);
                 }
             }
-            base = self.multi(base, base); // at most 32 multiplications
+            base = self.multi(base, base); // at most self.bits (32 here) multiplications
         }
         res
     }

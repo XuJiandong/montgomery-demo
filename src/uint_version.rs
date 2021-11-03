@@ -1,9 +1,6 @@
 #![allow(dead_code)]
 
-use std::{
-    cmp::Ordering,
-    ops::{Add, Div, Mul, Rem, Sub},
-};
+use crate::signed_integer::SignedInteger;
 
 use uint::construct_uint;
 
@@ -14,6 +11,8 @@ construct_uint! {
 construct_uint! {
     pub struct U512(8);
 }
+
+type I512 = SignedInteger<U512>;
 
 impl From<U256> for U512 {
     fn from(u: U256) -> Self {
@@ -40,24 +39,6 @@ impl From<U512> for U256 {
     }
 }
 
-#[derive(Copy, Clone, Eq, Debug)]
-pub struct I512 {
-    signed: bool,
-    num: U512,
-}
-
-impl I512 {
-    pub fn new(signed: bool, num: U512) -> Self {
-        I512 { signed, num }
-    }
-}
-
-impl From<U512> for I512 {
-    fn from(n: U512) -> Self {
-        Self::new(true, n)
-    }
-}
-
 impl From<U256> for I512 {
     fn from(n: U256) -> Self {
         Self::new(true, n.into())
@@ -67,123 +48,6 @@ impl From<U256> for I512 {
 impl From<u32> for I512 {
     fn from(n: u32) -> Self {
         Self::new(true, U512::from(n))
-    }
-}
-
-impl Add for I512 {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self.signed, rhs.signed) {
-            (true, true) => I512::new(true, self.num + rhs.num),
-            (true, false) => {
-                if self.num > rhs.num {
-                    I512::new(true, self.num - rhs.num)
-                } else {
-                    I512::new(false, rhs.num - self.num)
-                }
-            }
-            (false, true) => {
-                if self.num > rhs.num {
-                    I512::new(false, self.num - rhs.num)
-                } else {
-                    I512::new(true, rhs.num - self.num)
-                }
-            }
-            (false, false) => I512::new(false, self.num + rhs.num),
-        }
-    }
-}
-
-impl Sub for I512 {
-    type Output = Self;
-    fn sub(self, rhs: Self) -> Self::Output {
-        match (self.signed, rhs.signed) {
-            (true, true) => {
-                if self.num > rhs.num {
-                    I512::new(true, self.num - rhs.num)
-                } else {
-                    I512::new(false, rhs.num - self.num)
-                }
-            }
-            (true, false) => I512::new(true, self.num + rhs.num),
-            (false, true) => I512::new(false, self.num + rhs.num),
-            (false, false) => {
-                if self.num > rhs.num {
-                    I512::new(true, self.num - rhs.num)
-                } else {
-                    I512::new(false, rhs.num - self.num)
-                }
-            }
-        }
-    }
-}
-
-impl Mul for I512 {
-    type Output = Self;
-    fn mul(self, rhs: Self) -> Self::Output {
-        let signed = match (self.signed, rhs.signed) {
-            (true, true) => true,
-            (true, false) => false,
-            (false, true) => false,
-            (false, false) => false,
-        };
-        Self {
-            signed,
-            num: self.num * rhs.num,
-        }
-    }
-}
-
-impl Div for I512 {
-    type Output = Self;
-    fn div(self, rhs: Self) -> Self::Output {
-        let signed = match (self.signed, rhs.signed) {
-            (true, true) => true,
-            (true, false) => false,
-            (false, true) => false,
-            (false, false) => false,
-        };
-        Self {
-            signed,
-            num: self.num / rhs.num,
-        }
-    }
-}
-
-impl Rem for I512 {
-    type Output = Self;
-    fn rem(self, rhs: Self) -> Self {
-        assert!(rhs.num > 0.into());
-        assert!(rhs.signed);
-        if self.signed {
-            I512::new(true, self.num % rhs.num)
-        } else {
-            let res = I512::new(false, self.num % rhs.num);
-            res + I512::new(true, rhs.num)
-        }
-    }
-}
-
-impl Ord for I512 {
-    fn cmp(&self, rhs: &Self) -> Ordering {
-        match (self.signed, rhs.signed) {
-            (true, true) => self.num.cmp(&rhs.num),
-            (true, false) => Ordering::Greater,
-            (false, true) => Ordering::Less,
-            (false, false) => self.num.cmp(&rhs.num).reverse(),
-        }
-    }
-}
-
-impl PartialOrd for I512 {
-    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
-        Some(self.cmp(rhs))
-    }
-}
-
-impl PartialEq for I512 {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.signed == rhs.signed && self.num == rhs.num
     }
 }
 
@@ -277,8 +141,8 @@ impl Mont {
         let mut res = U256::from(0);
         let mut first_time: bool = true;
 
-        for index in 0..31 {
-            // at most 32 multiplications
+        for index in 0..self.bits {
+            // at most self.bits(256 here) multiplications
             if ((y >> index) & one) == one {
                 if first_time {
                     // note:
@@ -290,7 +154,7 @@ impl Mont {
                     res = self.multi(res, base);
                 }
             }
-            base = self.multi(base, base); // at most 32 multiplications
+            base = self.multi(base, base); // at most self.bits(256 here) multiplications
         }
         res
     }
