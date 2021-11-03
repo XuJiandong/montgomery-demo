@@ -1,3 +1,4 @@
+mod rsa;
 mod uint_version;
 
 // based on https://research.nccgroup.com/2021/06/09/optimizing-pairing-based-cryptography-montgomery-arithmetic-in-rust/
@@ -80,11 +81,21 @@ impl Mont {
     }
     pub fn pow(&self, x: u32, y: u32) -> u32 {
         let mut base = x;
-        let mut res: u32 = 1;
+        let mut res: u32 = 0;
+        let mut first_time: bool = true;
+
         for index in 0..31 {
             // at most 32 multiplications
             if ((y >> index) & 1) == 1 {
-                res = self.multi(res, base);
+                if first_time {
+                    // note:
+                    // `res = self.multi(1, base)` is not same
+                    // as res = base;
+                    res = base;
+                    first_time = false;
+                } else {
+                    res = self.multi(res, base);
+                }
             }
             base = self.multi(base, base); // at most 32 multiplications
         }
@@ -178,6 +189,35 @@ pub fn test_pow() {
             assert_eq!(expected, v);
         }
     }
+}
+
+#[test]
+pub fn test_pow2() {
+    let mut mont = Mont::new(33);
+    mont.precompute();
+    let base: u32 = 2;
+    let x = mont.to_mont(base);
+    println!("x = {}", x);
+    let v = mont.pow(x, 7);
+    let v = mont.reduce(v as u64);
+    assert_eq!(v, 29);
+}
+
+#[test]
+pub fn test_pow3() {
+    let mut mont = Mont::new(33);
+    mont.precompute();
+    let x: u32 = 2;
+    let y: u32 = 2;
+    let x2 = mont.to_mont(x);
+    let y2 = mont.to_mont(y);
+    let z2 = mont.multi(x2, y2);
+    let z = mont.reduce(z2 as u64);
+    assert_eq!(z, 4);
+
+    let p2 = mont.pow(x2, 2);
+    let p = mont.reduce(p2 as u64);
+    assert_eq!(p, 4);
 }
 
 pub fn main() {}
