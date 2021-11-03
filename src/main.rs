@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod rsa;
 mod uint_version;
 
@@ -60,9 +62,9 @@ impl Mont {
     // The overall process delivers T · R−1 mod N without an expensive division operation!
     pub fn reduce(&self, t: u64) -> u32 {
         assert!(self.init);
-        let t0 = t as u32 as u64; // low part of `t`, same as `mode self.r`, avoid overflow
-        let m = (t0 * self.np1 as u64) as u32 as u64; // `mod self.r`
-        let u = (t + m * (self.n as u64)) >> self.bits; // `/self.r`
+        let t0 = t as u32 as u64; // low part of `t`, same as `% self.r`, avoid overflow
+        let m = (t0 * self.np1 as u64) as u32 as u64; // `% self.r`
+        let u = (t + m * (self.n as u64)) >> self.bits; // `/ self.r`
         if u >= self.n as u64 {
             (u - self.n as u64) as u32
         } else {

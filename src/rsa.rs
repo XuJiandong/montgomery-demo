@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::Mont;
 
 // https://www.cs.utexas.edu/~mitra/honors/soln.html
