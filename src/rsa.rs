@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::Mont;
+use super::primitive_version::Mont;
 
 // https://www.cs.utexas.edu/~mitra/honors/soln.html
 

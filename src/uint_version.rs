@@ -1,5 +1,11 @@
 #![allow(dead_code)]
 
+use std::{
+    cell::RefCell,
+    ops::{Add, Mul, Sub},
+    rc::Rc,
+};
+
 use crate::signed_integer::SignedInteger;
 
 use uint::construct_uint;
@@ -65,7 +71,8 @@ pub fn egcd(a: I512, b: I512) -> (I512, I512, I512) {
     }
 }
 
-struct Mont {
+#[derive(Clone)]
+pub struct Mont {
     pub np1: U256,
     pub r: U512,
     pub n: U256,
@@ -157,6 +164,62 @@ impl Mont {
             base = self.multi(base, base); // at most self.bits(256 here) multiplications
         }
         res
+    }
+}
+
+#[derive(Clone)]
+pub struct MontForm {
+    mont: Rc<RefCell<Mont>>,
+    num: U256,
+}
+
+impl MontForm {
+    // it's not possible to implement `From<U256>` for `MontForm` because it requires extra `mont`
+    pub fn new(num: U256, mont: Mont) -> Self {
+        MontForm {
+            mont: Rc::new(RefCell::new(mont)),
+            num,
+        }
+    }
+    pub fn derive(&self, num: U256) -> Self {
+        MontForm {
+            mont: self.mont.clone(),
+            num,
+        }
+    }
+    pub fn pow(&self, pow: U256) -> Self {
+        let num = self.mont.borrow().pow(self.num, pow);
+        self.derive(num)
+    }
+}
+
+impl From<MontForm> for U256 {
+    fn from(m: MontForm) -> Self {
+        m.mont.borrow().reduce(m.num.into())
+    }
+}
+
+impl Add for MontForm {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        let sum = (self.num + rhs.num) % self.mont.borrow().n;
+        self.derive(sum)
+    }
+}
+
+impl Sub for MontForm {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self::Output {
+        let sub = (self.num - rhs.num) % self.mont.borrow().n;
+        self.derive(sub)
+    }
+}
+
+impl Mul for MontForm {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        let mul = self.mont.borrow().multi(self.num, rhs.num);
+        self.derive(mul)
     }
 }
 

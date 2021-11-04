@@ -1,5 +1,5 @@
 [package]
-name = "demo"
+name = "rvv-algo-demo"
 version = "0.1.0"
 authors = ["xjd <xjd@cryptape.com>"]
 edition = "2018"
@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 uint = { version = "0.9.1" }
-
+lazy_static = "1.4.0"
 
 [profile.release]
 overflow-checks = true
