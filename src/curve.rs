@@ -1,4 +1,5 @@
-use super::uint_version::{Mont, MontForm, U256, U512};
+use super::uint_version::{Mont, MontForm, U256};
+use super::U;
 use lazy_static::lazy_static;
 use std::ops::{Add, Mul};
 use std::str::FromStr;
@@ -37,12 +38,9 @@ impl Point {
     pub fn new_infinite() -> Self {
         Point {
             infinite: true,
-            x: U256::from(0),
-            y: U256::from(0),
+            x: U!(0),
+            y: U!(0),
         }
-    }
-    pub fn from_str(x: &str, y: &str) -> Self {
-        Self::new(U256::from_str(x).unwrap(), U256::from_str(y).unwrap())
     }
     pub fn x(&self) -> U256 {
         assert!(!self.infinite);
@@ -68,28 +66,28 @@ impl Add for Point {
         }
 
         let mont = MONT.clone();
-        let two = MontForm::new(U256::from(2), mont);
-        let three = two.derive(U256::from(3));
-        let x_p1 = two.derive(self.x());
-        let y_p1 = two.derive(self.y());
-        let x_p2 = two.derive(rhs.x());
-        let y_p2 = two.derive(rhs.y());
+        let two = MontForm::new(U!(2), mont);
+        let three = &two.derive(U!(3));
+        let x_p1 = &two.derive(self.x());
+        let y_p1 = &two.derive(self.y());
+        let x_p2 = &two.derive(rhs.x());
+        let y_p2 = &two.derive(rhs.y());
 
         let lam = if self == rhs {
             //  lam = 3 * x(P1) * x(P1) * pow(2 * y(P1), p - 2, p)
-            let pow = (two * y_p1.clone()).pow(MONT.n - 2);
-            three * x_p1.clone() * x_p1.clone() * pow
+            let pow = (two * y_p1).pow(MONT.n - 2);
+            three * x_p1 * x_p1 * pow
         } else {
             // lam = (y(P2) - y(P1)) * pow(x(P2) - x(P1), p - 2, p)
-            let base = x_p2.clone() - x_p1.clone();
-            (y_p2 - y_p1.clone()) * base.pow(MONT.n - 2)
+            let base = x_p2 - x_p1;
+            (y_p2 - y_p1) * base.pow(MONT.n - 2)
         };
         // x3 = (lam * lam - x(P1) - x(P2)) % p
         // y3 = (lam * (x(P1) - x3) - y(P1)) % p
-        let x3 = lam.clone() * lam.clone() - x_p1.clone() - x_p2.clone();
-        let y3 = lam * (x_p1 - x3.clone()) - y_p1.clone();
+        let x3 = &lam * &lam - x_p1 - x_p2;
+        let y3 = lam * (x_p1 - &x3) - y_p1;
 
-        Point::new(U256::from(x3), U256::from(y3))
+        Point::new(U!(x3), U!(y3))
     }
 }
 

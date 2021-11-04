@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod curve;
 mod primitive_version;
 mod rsa;

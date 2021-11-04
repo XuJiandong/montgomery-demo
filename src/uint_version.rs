@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-
 use std::{
     cell::RefCell,
     ops::{Add, Mul, Sub},
@@ -9,6 +8,13 @@ use std::{
 use crate::signed_integer::SignedInteger;
 
 use uint::construct_uint;
+
+#[macro_export]
+macro_rules! U {
+    ($n:expr) => {
+        U256::from($n)
+    };
+}
 
 construct_uint! {
     pub struct U256(4);
@@ -88,7 +94,7 @@ impl Mont {
         Mont {
             r,
             n,
-            np1: U256::from(0),
+            np1: U!(0),
             bits,
             init: false,
         }
@@ -121,13 +127,13 @@ impl Mont {
     // The overall process delivers T · R−1 mod N without an expensive division operation!
     pub fn reduce(&self, t: U512) -> U256 {
         assert!(self.init);
-        let t0: U512 = U256::from(t).into(); // low part of `t`, same as `% self.r`, avoid overflow
-        let m: U512 = U256::from(t0 * U512::from(self.np1)).into(); // `% self.r`
+        let t0: U512 = U!(t).into(); // low part of `t`, same as `% self.r`, avoid overflow
+        let m: U512 = U!(t0 * U512::from(self.np1)).into(); // `% self.r`
         let u = (t + m * U512::from(self.n)) >> self.bits; // `/ self.r`
         if u >= U512::from(self.n) {
-            U256::from(u - self.n)
+            U!(u - self.n)
         } else {
-            U256::from(u)
+            U!(u)
         }
     }
 
@@ -135,7 +141,7 @@ impl Mont {
         assert!(self.init);
         let x2: U512 = x.into();
         let res = (x2 * self.r) % self.n;
-        U256::from(res)
+        U!(res)
     }
     pub fn multi(&self, x: U256, y: U256) -> U256 {
         let xy = U512::from(x) * U512::from(y);
@@ -144,8 +150,8 @@ impl Mont {
 
     pub fn pow(&self, x: U256, y: U256) -> U256 {
         let mut base = x;
-        let one = U256::from(1);
-        let mut res = U256::from(0);
+        let one = U!(1);
+        let mut res = U!(0);
         let mut first_time: bool = true;
 
         for index in 0..self.bits {
@@ -207,6 +213,22 @@ impl Add for MontForm {
     }
 }
 
+impl<'a> Add<&'a MontForm> for MontForm {
+    type Output = Self;
+    fn add(self, rhs: &'a Self) -> Self::Output {
+        let sum = (self.num + rhs.num) % self.mont.borrow().n;
+        self.derive(sum)
+    }
+}
+
+impl<'a> Add<&'a MontForm> for &'a MontForm {
+    type Output = MontForm;
+    fn add(self, rhs: Self) -> Self::Output {
+        let sum = (self.num + rhs.num) % self.mont.borrow().n;
+        self.derive(sum)
+    }
+}
+
 impl Sub for MontForm {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
@@ -215,8 +237,40 @@ impl Sub for MontForm {
     }
 }
 
+impl<'a> Sub<&'a MontForm> for MontForm {
+    type Output = Self;
+    fn sub(self, rhs: &'a Self) -> Self::Output {
+        let sub = (self.num - rhs.num) % self.mont.borrow().n;
+        self.derive(sub)
+    }
+}
+
+impl<'a> Sub<&'a MontForm> for &'a MontForm {
+    type Output = MontForm;
+    fn sub(self, rhs: Self) -> Self::Output {
+        let sub = (self.num - rhs.num) % self.mont.borrow().n;
+        self.derive(sub)
+    }
+}
+
 impl Mul for MontForm {
     type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        let mul = self.mont.borrow().multi(self.num, rhs.num);
+        self.derive(mul)
+    }
+}
+
+impl<'a> Mul<&'a MontForm> for MontForm {
+    type Output = Self;
+    fn mul(self, rhs: &'a Self) -> Self::Output {
+        let mul = self.mont.borrow().multi(self.num, rhs.num);
+        self.derive(mul)
+    }
+}
+
+impl<'a> Mul<&'a MontForm> for &'a MontForm {
+    type Output = MontForm;
     fn mul(self, rhs: Self) -> Self::Output {
         let mul = self.mont.borrow().multi(self.num, rhs.num);
         self.derive(mul)
@@ -273,13 +327,13 @@ fn test_n(n: U256) {
     let mut mont = Mont::new(n);
     mont.precompute();
 
-    let x = U256::from(10);
+    let x = U!(10);
     let x2 = mont.to_mont(x);
     let x3 = mont.reduce(x2.into());
     assert_eq!(x, x3);
 
-    let x = U256::from(10);
-    let y = U256::from(20);
+    let x = U!(10);
+    let y = U!(20);
     // into montgomery form
     let x2 = mont.to_mont(x);
     let y2 = mont.to_mont(y);
@@ -292,7 +346,7 @@ fn test_n(n: U256) {
 }
 
 fn test_xy(x: U256, y: U256) {
-    let mut mont = Mont::new(U256::from(1000001));
+    let mut mont = Mont::new(U!(1000001));
     mont.precompute();
 
     // into montgomery form
@@ -310,7 +364,7 @@ fn test_xy(x: U256, y: U256) {
 pub fn test_n_loops() {
     for n in 19..10001 {
         if n % 2 == 1 {
-            test_n(U256::from(n));
+            test_n(U!(n));
         }
     }
 }
@@ -318,18 +372,18 @@ pub fn test_n_loops() {
 #[test]
 pub fn test_xy_loops() {
     for x in 10000..20000 {
-        test_xy(U256::from(x), U256::from(x + 20));
+        test_xy(U!(x), U!(x + 20));
     }
 }
 
 #[test]
 pub fn test_multiple() {
-    let mut mont = Mont::new(U256::from(17));
+    let mut mont = Mont::new(U!(17));
     mont.precompute();
 
-    let x = U256::from(1);
-    let y = U256::from(2);
-    let z = U256::from(3);
+    let x = U!(1);
+    let y = U!(2);
+    let z = U!(3);
     let x2 = mont.to_mont(x);
     let y2 = mont.to_mont(y);
     let z2 = mont.to_mont(z);
@@ -342,12 +396,12 @@ pub fn test_multiple() {
 
 #[test]
 pub fn test_pow() {
-    let mut mont = Mont::new(U256::from(17));
+    let mut mont = Mont::new(U!(17));
     mont.precompute();
     for base in 2..5 {
         for n in 5..10 {
-            let base = U256::from(base);
-            let n = U256::from(n);
+            let base = U!(base);
+            let n = U!(n);
             let x = mont.to_mont(base);
 
             let v = mont.pow(x, n);
@@ -361,28 +415,48 @@ pub fn test_pow() {
 
 #[test]
 pub fn test_pow2() {
-    let mut mont = Mont::new(U256::from(33));
+    let mut mont = Mont::new(U!(33));
     mont.precompute();
-    let base = U256::from(2);
+    let base = U!(2);
     let x = mont.to_mont(base);
-    let v = mont.pow(x, U256::from(7));
+    let v = mont.pow(x, U!(7));
     let v = mont.reduce(v.into());
-    assert_eq!(v, U256::from(29));
+    assert_eq!(v, U!(29));
 }
 
 #[test]
 pub fn test_pow3() {
-    let mut mont = Mont::new(U256::from(33));
+    let mut mont = Mont::new(U!(33));
     mont.precompute();
-    let x = U256::from(2);
-    let y = U256::from(2);
+    let x = U!(2);
+    let y = U!(2);
     let x2 = mont.to_mont(x);
     let y2 = mont.to_mont(y);
     let z2 = mont.multi(x2, y2);
     let z = mont.reduce(z2.into());
-    assert_eq!(z, U256::from(4));
+    assert_eq!(z, U!(4));
 
-    let p2 = mont.pow(x2, U256::from(2));
+    let p2 = mont.pow(x2, U!(2));
     let p = mont.reduce(p2.into());
-    assert_eq!(p, U256::from(4));
+    assert_eq!(p, U!(4));
+}
+
+pub fn test_ops() {
+    let mut mont = Mont::new(U!(33));
+    mont.precompute();
+
+    let x = &MontForm::new(U!(2), mont);
+    let y = &x.derive(U!(3));
+
+    let sum = x + y;
+    assert_eq!(U!(5), sum.into());
+
+    let sub = y - x;
+    assert_eq!(U!(1), sub.into());
+
+    let mul = x * y;
+    assert_eq!(U!(6), mul.into());
+
+    let pow = x.pow(U!(3));
+    assert_eq!(U!(8), pow.into());
 }
