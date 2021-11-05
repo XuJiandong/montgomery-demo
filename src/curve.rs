@@ -91,9 +91,24 @@ impl Add for Point {
     }
 }
 
-impl Mul for Point {
+// https://github.com/XuJiandong/taproot-playground/blob/d5f48c5d5797395ce3f2e209cca29b01695a3d48/py/reference.py#L54
+impl Mul<U256> for Point {
     type Output = Self;
-    fn mul(self, _rhs: Self) -> Self::Output {
-        unimplemented!();
+    fn mul(self, n: U256) -> Self::Output {
+        let mut result: Self = self.clone();
+        let mut first_time = true;
+        let mut p = self.clone();
+        for index in 0..256 {
+            if ((n >> index) & U!(1)) == U!(1) {
+                if first_time {
+                    result = p;
+                    first_time = false;
+                } else {
+                    result = result + p;
+                }
+            }
+            p = p + p;
+        }
+        result
     }
 }
