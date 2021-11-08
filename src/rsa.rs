@@ -53,15 +53,3 @@ impl Rsa {
         plain_text
     }
 }
-
-#[test]
-pub fn test_rsa() {
-    let rsa = Rsa::new();
-    let plain_text: u32 = 2;
-
-    let cipher_text = rsa.encrypt(plain_text);
-    println!("cipher_text = {}", cipher_text);
-    let plain_text2 = rsa.decrypt(cipher_text);
-
-    assert_eq!(plain_text, plain_text2);
-}

@@ -1,7 +1,8 @@
 #![allow(dead_code)]
+#![no_std]
 
-mod curve;
-mod primitive_version;
-mod rsa;
-mod signed_integer;
-mod uint_version;
+pub mod curve;
+pub mod primitive_version;
+pub mod rsa;
+pub mod signed_integer;
+pub mod uint_version;

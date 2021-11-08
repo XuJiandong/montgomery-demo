@@ -1,7 +1,5 @@
-use std::{
-    cmp::{Ord, Ordering},
-    ops::{Add, Div, Mul, Rem, Sub},
-};
+use core::cmp::{Ord, Ordering};
+use core::ops::{Add, Div, Mul, Rem, Sub};
 
 #[derive(Copy, Clone, Eq, Debug)]
 pub struct SignedInteger<T>

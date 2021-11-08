@@ -1,8 +1,9 @@
 use super::uint_version::{Mont, MontForm, U256};
 use super::U;
 use lazy_static::lazy_static;
-use std::ops::{Add, Mul};
-use std::str::FromStr;
+
+use core::ops::{Add, Mul};
+use core::str::FromStr;
 
 lazy_static! {
     static ref MONT: Mont = {
@@ -66,12 +67,12 @@ impl Add for Point {
         }
 
         let mont = MONT.clone();
-        let two = MontForm::new(U!(2), mont);
-        let three = &two.derive(U!(3));
-        let x_p1 = &two.derive(self.x());
-        let y_p1 = &two.derive(self.y());
-        let x_p2 = &two.derive(rhs.x());
-        let y_p2 = &two.derive(rhs.y());
+        let two = MontForm::from_u256(U!(2), mont);
+        let three = &two.derive_from_u256(U!(3));
+        let x_p1 = &two.derive_from_u256(self.x());
+        let y_p1 = &two.derive_from_u256(self.y());
+        let x_p2 = &two.derive_from_u256(rhs.x());
+        let y_p2 = &two.derive_from_u256(rhs.y());
 
         let lam = if self == rhs {
             //  lam = 3 * x(P1) * x(P1) * pow(2 * y(P1), p - 2, p)
