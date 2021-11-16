@@ -61,7 +61,7 @@ where
         match (self.signed, rhs.signed) {
             (true, true) => Self::new(true, self.num + rhs.num),
             (true, false) => {
-                if self.num > rhs.num {
+                if self.num >= rhs.num {
                     Self::new(true, self.num - rhs.num)
                 } else {
                     Self::new(false, rhs.num - self.num)
@@ -93,7 +93,7 @@ where
     fn sub(self, rhs: Self) -> Self::Output {
         match (self.signed, rhs.signed) {
             (true, true) => {
-                if self.num > rhs.num {
+                if self.num >= rhs.num {
                     Self::new(true, self.num - rhs.num)
                 } else {
                     Self::new(false, rhs.num - self.num)
@@ -103,9 +103,9 @@ where
             (false, true) => Self::new(false, self.num + rhs.num),
             (false, false) => {
                 if self.num > rhs.num {
-                    Self::new(true, self.num - rhs.num)
+                    Self::new(false, self.num - rhs.num)
                 } else {
-                    Self::new(false, rhs.num - self.num)
+                    Self::new(true, rhs.num - self.num)
                 }
             }
         }

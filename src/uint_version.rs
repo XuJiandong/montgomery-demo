@@ -78,9 +78,15 @@ pub fn egcd(a: I512, b: I512) -> (I512, I512, I512) {
 
 #[derive(Clone)]
 pub struct Mont {
+    // np1, the name from
+    // https://research.nccgroup.com/2021/06/09/optimizing-pairing-based-cryptography-montgomery-arithmetic-in-rust/
+    // it can also be called "inverse"
     pub np1: U256,
+    // rounding? it's 2.pow(n), e.g. 2.pow(256)
     pub r: U512,
+    // modulus, a prime number
     pub n: U256,
+    // used by `r`
     pub bits: usize,
     pub init: bool,
 }
@@ -114,7 +120,6 @@ impl Mont {
         let np1 = I512::from(self.r) - np;
         assert!(np1 >= zero);
         self.np1 = np1.num.into(); // can be truncated
-
         let r = I512::from(self.r) * rp1;
         let n = I512::from(self.n) * np1;
         assert_eq!(n + one, r);

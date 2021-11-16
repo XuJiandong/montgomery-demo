@@ -1,5 +1,4 @@
 // use std::println;
-
 mod primitive_version_test {
     use rvv_algo_demo::primitive_version::*;
     fn test_n(n: u32) {
@@ -322,6 +321,81 @@ mod uint_version_test {
 
         let pow = x.pow(U!(3));
         assert_eq!(U!(8), pow.into());
+    }
+    /*
+    macro_rules! field_impl {
+        ($name:ident, $modulus:expr, $rsquared:expr, $rcubed:expr, $one:expr, $inv:expr) => {
+
+    field_impl!(
+        Fr,
+        [
+            0x2833e84879b9709143e1f593f0000001,
+            0x30644e72e131a029b85045b68181585d
+        ],
+        [
+            0x53fe3ab1e35c59e31bb8e645ae216da7,
+            0x0216d0b17f4e44a58c49833d53bb8085
+        ],
+        [
+            0x2a489cbe1cfbb6b85e94d8e1b4bf0040,
+            0x0cf8594b7fcc657c893cc664a19fcfed
+        ],
+        [
+            0x36fc76959f60cd29ac96341c4ffffffb,
+            0x0e0a77c19a07df2f666ea36f7879462e
+        ],
+        0x6586864b4c6911b3c2e1f593efffffff
+    );
+     */
+    fn from_u128pair(n: &[u128; 2]) -> U256 {
+        let mut buf = [0u8; 32];
+        buf[0..16].copy_from_slice(&n[0].to_le_bytes());
+        buf[16..32].copy_from_slice(&n[1].to_le_bytes());
+        U256::from_little_endian(&buf)
+    }
+
+    #[test]
+    pub fn test_number() {
+        let n = from_u128pair(&[
+            0x2833e84879b9709143e1f593f0000001u128,
+            0x30644e72e131a029b85045b68181585du128,
+        ]);
+        let mut mont = Mont::new(n);
+        mont.precompute();
+        // println!("np1 = 0x{:x}", mont.np1);
+        let np1 = 0x6586864b4c6911b3c2e1f593efffffffu128;
+        assert_eq!(np1, mont.np1.low_u128());
+
+        let r: U512 = mont.r.into();
+        let r_square = (r % mont.n) * (r % mont.n);
+        let r_square2 = r_square % mont.n;
+        // println!("r_square = 0x{:x}", r_square2);
+        let original_r_square = from_u128pair(&[
+            0x53fe3ab1e35c59e31bb8e645ae216da7,
+            0x0216d0b17f4e44a58c49833d53bb8085,
+        ]);
+        assert_eq!(original_r_square, r_square2.into());
+
+        let r_cubed = r_square2 * (r % mont.n) % mont.n;
+        let original_r_cubed = from_u128pair(&[
+            0x2a489cbe1cfbb6b85e94d8e1b4bf0040,
+            0x0cf8594b7fcc657c893cc664a19fcfed,
+        ]);
+        assert_eq!(original_r_cubed, r_cubed.into());
+    }
+    #[test]
+    pub fn test_number2() {
+        // inv = 0x9ede7d651eca6ac987d20782e4866389
+        // modulo = 0x97816a916871ca8d3c208c16d87cfd47, 0x30644e72e131a029b85045b68181585d
+        let n = from_u128pair(&[
+            0x97816a916871ca8d3c208c16d87cfd47u128, 0x30644e72e131a029b85045b68181585du128
+        ]);
+        let mut mont = Mont::new(n);
+        mont.precompute();
+        // println!("np1 = 0x{:x}", mont.np1);
+        let np1 = 0x9ede7d651eca6ac987d20782e4866389;
+        assert_eq!(np1, mont.np1.low_u128());
+        println!("mont.np1 = 0x{:x},0x{:x}", mont.np1.low_u128(), (mont.np1 >> 128).low_u128());
     }
 }
 
