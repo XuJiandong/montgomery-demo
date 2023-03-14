@@ -397,6 +397,20 @@ mod uint_version_test {
         assert_eq!(np1, mont.np1.low_u128());
         println!("mont.np1 = 0x{:x},0x{:x}", mont.np1.low_u128(), (mont.np1 >> 128).low_u128());
     }
+    #[test]
+    pub fn test_number3() {
+        // inv = 0x6586864b4c6911b3c2e1f593efffffff
+        // modulo = 0x2833e84879b9709143e1f593f0000001, 0x30644e72e131a029b85045b68181585d
+        let n = from_u128pair(&[
+            0x2833e84879b9709143e1f593f0000001, 0x30644e72e131a029b85045b68181585d
+        ]);
+        let mut mont = Mont::new(n);
+        mont.precompute();
+        // println!("np1 = 0x{:x}", mont.np1);
+        let np1 = 0x6586864b4c6911b3c2e1f593efffffff;
+        assert_eq!(np1, mont.np1.low_u128());
+        println!("mont.np1 = 0x{:x},0x{:x}", mont.np1.low_u128(), (mont.np1 >> 128).low_u128());
+    }
 }
 
 #[test]
